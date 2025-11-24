@@ -333,11 +333,7 @@ fn gen_statements(fields: &Fields, encoding: Encoding, flat: bool) -> syn::Resul
                 if (field.attrs.borrow().is_some() || field.index.is_b())
                     && is_cow(&field.typ, |t| is_str(t) || is_byte_slice(t))
                 {
-                    quote!(minicbor::__minicbor_cfg! {
-                        'std { Some(std::borrow::Cow::Borrowed(__v777)) }
-                        'alloc { Some(alloc::borrow::Cow::Borrowed(__v777)) }
-                        'otherwise { Some(__v777) }
-                    })
+                    quote!(Some(minicbor::__private::cow_borrowed(__v777)))
                 } else {
                     quote!(Some(__v777))
                 };
@@ -445,23 +441,12 @@ fn make_transparent_impl
         if (field.attrs.borrow().is_some() || field.index.is_b())
             && is_cow(&field.typ, |t| is_str(t) || is_byte_slice(t))
         {
-            quote!(minicbor::__minicbor_cfg! {
-                'std {
-                    match #decode_fn(__d777, __ctx777) {
-                        Ok(v)  => std::borrow::Cow::Borrowed(v),
-                        Err(e) => return Err(e)
-                    }
+            quote! {
+                match #decode_fn(__d777, __ctx777) {
+                    Ok(v)  => minicbor::__private::cow_borrowed(v),
+                    Err(e) => return Err(e)
                 }
-                'alloc {
-                    match #decode_fn(__d777, __ctx777) {
-                        Ok(v)  => alloc::borrow::Cow::Borrowed(v),
-                        Err(e) => return Err(e)
-                    }
-                }
-                'otherwise {
-                    #decode_fn(__d777, __ctx777)?
-                }
-            })
+            }
         } else {
             quote! {
                 #decode_fn(__d777, __ctx777)?
@@ -578,21 +563,7 @@ fn decode_tag(a: &Attributes) -> proc_macro2::TokenStream {
             let __p777 = __d777.position();
             let __t777 = __d777.tag()?;
             if #t != __t777.as_u64() {
-                return Err(minicbor::__minicbor_cfg! {
-                    'std {
-                        minicbor::decode::Error::tag_mismatch(__t777)
-                            .with_message(format!("expected tag {}", #t))
-                            .at(__p777)
-                    }
-                    'alloc {
-                        minicbor::decode::Error::tag_mismatch(__t777)
-                            .with_message(alloc::format!("expected tag {}", #t))
-                            .at(__p777)
-                    }
-                    'otherwise {
-                        minicbor::decode::Error::tag_mismatch(__t777).at(__p777)
-                    }
-                });
+                return Err(minicbor::__private::tag_mismatch(__t777, #t).at(__p777));
             }
         }
     } else {

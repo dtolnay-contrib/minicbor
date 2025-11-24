@@ -160,8 +160,12 @@ pub use encode::{Encode, Encoder, CborLen};
 
 #[cfg(feature = "derive")]
 pub use minicbor_derive::*;
+
+// Not public API. Used from derive-generated code only.
 #[cfg(feature = "derive")]
-mod derive;
+#[doc(hidden)]
+#[path = "derive.rs"]
+pub mod __private;
 
 #[cfg(feature = "alloc")]
 use core::convert::Infallible;

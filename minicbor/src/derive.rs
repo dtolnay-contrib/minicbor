@@ -1,38 +1,31 @@
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 #[doc(hidden)]
-#[macro_export]
-macro_rules! __minicbor_cfg {
-    (
-        'std {$($std:tt)*}
-        'alloc {$($alloc:tt)*}
-        'otherwise {$($otherwise:tt)*}
-    ) => {
-        $($std)*
-    };
+#[inline]
+pub fn cow_borrowed<'a, T>(t: &'a T) -> alloc::borrow::Cow<'a, T>
+where
+    T: alloc::borrow::ToOwned + ?Sized,
+{
+    alloc::borrow::Cow::Borrowed(t)
 }
 
-#[cfg(all(feature = "alloc", not(feature = "std")))]
+#[cfg(not(feature = "alloc"))]
 #[doc(hidden)]
-#[macro_export]
-macro_rules! __minicbor_cfg {
-    (
-        'std {$($std:tt)*}
-        'alloc {$($alloc:tt)*}
-        'otherwise {$($otherwise:tt)*}
-    ) => {
-        $($alloc)*
-    };
+#[inline]
+pub fn cow_borrowed<T>(t: T) -> T {
+    t
 }
 
-#[cfg(all(not(feature = "alloc"), not(feature = "std")))]
+#[cfg(feature = "alloc")]
 #[doc(hidden)]
-#[macro_export]
-macro_rules! __minicbor_cfg {
-    (
-        'std {$($std:tt)*}
-        'alloc {$($alloc:tt)*}
-        'otherwise {$($otherwise:tt)*}
-    ) => {
-        $($otherwise)*
-    };
+#[inline]
+pub fn tag_mismatch(tag: crate::data::Tag, expected: u64) -> crate::decode::Error {
+    crate::decode::Error::tag_mismatch(tag)
+        .with_message(alloc::format!("expected tag {}", expected))
+}
+
+#[cfg(not(feature = "alloc"))]
+#[doc(hidden)]
+#[inline]
+pub fn tag_mismatch(tag: crate::data::Tag, _expected: u64) -> crate::decode::Error {
+    crate::decode::Error::tag_mismatch(tag)
 }
